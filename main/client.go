@@ -3,32 +3,47 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 )
 
 func main() {
-	// Connect to the server
-	conn, err := net.Dial("tcp", "localhost:8080")
+	conn, err := net.Dial("tcp", "localhost:8080") // 1
 	if err != nil {
-		fmt.Println("Error connecting:", err)
+		fmt.Println(err)
 		return
 	}
+
 	defer conn.Close()
-	// Send data to the server
-	message := "Hello, server!"
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error writing:", err)
-		return
-	}
+	go func(c net.Conn) {
+		send := []string{"피카츄", "라이츄", "파이리", "꼬부기"}
+		for i := range send {
+			_, err = c.Write([]byte(send[i]))
+			if err != nil {
+				fmt.Println("Failed to write data : ", err)
+				break
+			}
+			if i == len(send)-1 {
+				defer conn.Close()
+				return
+			}
+			i++
+			time.Sleep(5 * time.Second)
 
-	// Read the response from the server
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Println("Error reading:", err)
-		return
-	}
+		}
+	}(conn)
 
-	// Print the server's response
-	fmt.Println("Server response:", string(buffer[:n]))
+	go func(c net.Conn) {
+		recv := make([]byte, 4096)
+
+		for {
+			n, err := c.Read(recv)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("client : ", string(recv[:n]))
+		}
+	}(conn)
+
+	fmt.Scanln()
 }
