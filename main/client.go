@@ -13,7 +13,6 @@ func main() {
 		return
 	}
 	defer conn.Close()
-
 	// Send data to the server
 	message := "Hello, server!"
 	_, err = conn.Write([]byte(message))
