@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8080") // Dial : 전화걸다
+	conn, err := net.Dial("tcp", "localhost:3000") // Dial : 전화걸다
 	if err != nil {
 		fmt.Println(err)
 		return
