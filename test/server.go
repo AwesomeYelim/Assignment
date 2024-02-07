@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"sync"
 )
 
 type Message struct {
@@ -10,46 +11,58 @@ type Message struct {
 }
 
 func main() {
-	serverAddr, _ := net.ResolveUDPAddr("udp", "localhost:8080")
-	listener, _ := net.Listen("tcp", "localhost:3000")
+	var wg sync.WaitGroup
+
+	listener, _ := net.Listen("tcp", "localhost:3000")           // tcp 서버 생성
+	serverAddr, _ := net.ResolveUDPAddr("udp", "localhost:3001") // udp 생성
+
 	defer listener.Close()
-
-	conn, _ := net.ListenUDP("udp", serverAddr)
-	tcpconn, _ := listener.Accept()
-	defer conn.Close()
-
-	fmt.Println("UDP server is listening on", serverAddr)
 
 	// a,b channel 을 생성
 	AChannel := make(chan Message, 2) // 초기 버퍼를 설정하는 이유는 => 처음 채널 크기는 0이므로 데이터를 빼갈때 까지 대기함 => 데이터를 가져가지 않아서 프로그램이 멈추는 현상이 생긴다(deadlock)
 	BChannel := make(chan Message, 2)
 
+	udpconn, _ := net.DialUDP("udp", nil, serverAddr) // udp 패킷에서는 정보를 어디서 먼저 줄것인지를 표시하기위해 Dial을 먼저 작성해준다.
+	tcpconn, _ := listener.Accept()
+	defer tcpconn.Close()
+	defer udpconn.Close()
+
+	//fmt.Println("전달 완료^_^")
+
+	wg.Add(1)
+	// 통신을 받아서 a channel 에 할당하는 함수
 	go func() {
-		recv := make([]byte, 1024)
-		defer tcpconn.Close()
+		//defer tcpconn.Close()
+
+		buffer := make([]byte, 1024)
 		for {
-			n, _ := tcpconn.Read(recv)
-			AChannel <- Message{string(recv[:n])}
+			n, _ := tcpconn.Read(buffer)
+			AChannel <- Message{Text: string(buffer[:n])}
 		}
+		//conn.Write([]byte(response.Text))
 	}()
 
+	wg.Add(1)
+	// b channel에 할당
 	go func() {
 		for {
 			BChannel <- <-AChannel
 		}
 	}()
 
+	wg.Add(1)
+	// udp 연결루틴 생성 및 송신
 	go func() {
-		t := <-BChannel
-		msg := []byte(t.Text)
-		_, _ = conn.WriteTo(msg, serverAddr)
-		fmt.Println(t)
+		defer wg.Done()
+		for {
+			response := <-BChannel
+			// 클라이언트로 msg write
+			msg := []byte(response.Text)
+			_, _ = udpconn.Write(msg)
+			fmt.Println(string(msg))
+		}
 	}()
-	//fmt.Print("Enter a message: ")
-	//message := readInput()
-	//
-	//_, _ = conn.Write([]byte(message))
-	//
-	//fmt.Println("Message sent to UDP server:", message)
+	wg.Wait()
+	//close(BChannel)
 
 }
