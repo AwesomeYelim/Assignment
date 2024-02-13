@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	conn, _ := net.Dial("tcp", "localhost:3000")
+	localAddr, _ := net.ResolveTCPAddr("tcp", "localhost:3000")
+	conn, _ := net.DialTCP("tcp", localAddr, &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 1234})
 	serverAddr, _ := net.ResolveUDPAddr("udp", "localhost:3001")
 
 	defer conn.Close()
@@ -21,7 +22,10 @@ func main() {
 	for {
 		fmt.Print("Enter a message: ")
 		msg := readInput()
-		_, _ = conn.Write([]byte(msg))
+		_, err := conn.Write([]byte(msg))
+		if err != nil {
+			fmt.Println(err)
+		}
 		// 파일을 읽을때 까지 대기함
 		n, _, _ := udpconn.ReadFromUDP(buffer)
 		message := string(buffer[:n])
