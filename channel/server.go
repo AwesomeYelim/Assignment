@@ -11,6 +11,7 @@ type Message struct {
 }
 
 func main() {
+	
 	var wg sync.WaitGroup
 
 	listenAddr, _ := net.ResolveTCPAddr("tcp", "localhost:1234") // tcp 서버 생성
