@@ -67,8 +67,7 @@ func main() {
 	// udp 연결루틴 생성 및 송신
 	go func() {
 		defer wg.Done()
-		for item := range BChannel {
-			response := item
+		for response := range BChannel {
 			// 클라이언트로 msg write
 			msg := []byte(response.Text)
 			_, _ = udpconn.Write(msg)
@@ -76,5 +75,4 @@ func main() {
 		}
 	}()
 	wg.Wait()
-	listener.Close()
 }
