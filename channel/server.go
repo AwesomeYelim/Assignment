@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 )
 
 type Message struct {
@@ -11,15 +12,15 @@ type Message struct {
 }
 
 func main() {
-	
+
 	var wg sync.WaitGroup
 
 	listenAddr, _ := net.ResolveTCPAddr("tcp", "localhost:1234") // tcp 서버 생성
 	serverAddr, _ := net.ResolveUDPAddr("udp", "localhost:3001") // udp 생성
 
 	// a,b channel 을 생성
-	AChannel := make(chan Message, 2) // 초기 버퍼를 설정하는 이유는 => 처음 채널 크기는 0이므로 데이터를 빼갈때 까지 대기함 => 데이터를 가져가지 않아서 프로그램이 멈추는 현상이 생긴다(deadlock)
-	BChannel := make(chan Message, 2)
+	AChannel := make(chan Message)
+	BChannel := make(chan Message)
 
 	listener, err := net.ListenTCP("tcp", listenAddr)
 
@@ -44,6 +45,7 @@ func main() {
 			buffer := make([]byte, 1024)
 			for {
 				n, err := tcpconn.Read(buffer)
+				fmt.Println("test", string(buffer[:n]))
 				if n == 0 {
 					break
 				}
@@ -51,6 +53,7 @@ func main() {
 					fmt.Println(err)
 				}
 				AChannel <- Message{Text: string(buffer[:n])}
+
 			}
 		}
 
@@ -60,6 +63,7 @@ func main() {
 	// b channel에 할당
 	go func() {
 		for item := range AChannel {
+			time.Sleep(time.Second * 2)
 			BChannel <- item
 		}
 	}()
